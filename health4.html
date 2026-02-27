@@ -1,0 +1,98 @@
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Health Monitoring System</title>
+    <style>
+        body {
+            font-family: Arial;
+            background-color: #f4f6f9;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            width: 350px;
+            margin: auto;
+            border-radius: 10px;
+            box-shadow: 0px 0px 15px gray;
+        }
+
+        input {
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: blue;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Real-Time Health Monitoring</h1>
+
+<div class="card">
+    <input type="number" id="hr" placeholder="Heart Rate (BPM)">
+    <input type="number" id="spo2" placeholder="SpO2 (%)">
+    <input type="number" id="activity" placeholder="Activity Level (0-1)">
+    <button onclick="checkRisk()">Check Risk</button>
+
+    <div id="result"></div>
+</div>
+
+<script>
+function checkRisk() {
+
+    let hr = parseFloat(document.getElementById("hr").value);
+    let spo2 = parseFloat(document.getElementById("spo2").value);
+    let activity = parseFloat(document.getElementById("activity").value);
+
+    let riskScore = 0;
+
+    if (hr > 100) {
+        riskScore += 40;
+    }
+
+    if (spo2 < 95) {
+        riskScore += 40;
+    }
+
+    if (activity < 0.2 && hr > 95) {
+        riskScore += 20;
+    }
+
+    let status = "NORMAL";
+    let color = "green";
+
+    if (riskScore >= 60) {
+        status = "HIGH RISK";
+        color = "red";
+    } else if (riskScore >= 30) {
+        status = "MODERATE RISK";
+        color = "orange";
+    }
+
+    document.getElementById("result").innerHTML =
+        "Risk Score: " + riskScore + "<br>Status: " + status;
+
+    document.getElementById("result").style.color = color;
+}
+</script>
+
+</body>
+</html>
