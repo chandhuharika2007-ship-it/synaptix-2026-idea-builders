@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioSync AI | Real-Time Predictor</title>
+    <style>
+        :root {
+            --bg: #0d0d12;
+            --panel: #1a1a24;
+            --accent: #00f2ff; /* Default Safe Cyan */
+            --text: #ffffff;
+            --border: #333344;
+        }
+
+        body { 
+            background: var(--bg); 
+            color: var(--text); 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+        }
+
+        .app-container { 
+            width: 380px; 
+            background: var(--panel); 
+            border-radius: 28px; 
+            padding: 25px; 
+            border: 1px solid var(--border); 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        /* Header */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .brand { font-weight: 800; letter-spacing: 1px; font-size: 18px; }
+        .brand span { color: var(--accent); }
+        #status-indicator { 
+            font-size: 10px; 
+            border: 1px solid var(--accent); 
+            color: var(--accent); 
+            padding: 5px 12px; 
+            border-radius: 20px; 
+            text-transform: uppercase;
+        }
+
+        /* Gauge */
+        .gauge-area { text-align: center; margin-bottom: 25px; position: relative; }
+        .circular-chart { width: 160px; height: 160px; margin: 0 auto; }
+        .circle-bg { fill: none; stroke: #2a2a35; stroke-width: 3; }
+        .circle { 
+            fill: none; 
+            stroke: var(--accent); 
+            stroke-width: 3; 
+            stroke-linecap: round; 
+            transition: stroke-dasharray 0.8s ease, stroke 0.5s ease; 
+        }
+        .percentage { fill: white; font-size: 9px; text-anchor: middle; font-weight: bold; }
+
+        /* Vitals Cards */
+        .vital-card { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 14px 20px; 
+            background: rgba(255,255,255,0.03); 
+            border-radius: 16px; 
+            margin-bottom: 10px; 
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .vital-label { color: #888; font-size: 14px; }
+        .vital-value { font-weight: bold; color: var(--accent); font-size: 18px; }
+
+        /* Navigation Buttons */
+        .nav-footer { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 10px; 
+            margin-top: 25px; 
+            padding-top: 20px; 
+            border-top: 1px solid var(--border); 
+        }
+        .mode-btn { 
+            background: #252533; 
+            border: 1px solid transparent; 
+            color: #777; 
+            padding: 12px 5px; 
+            border-radius: 14px; 
+            font-size: 9px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: 0.3s;
+        }
+        .mode-btn.active { 
+            background: #2d2d3d; 
+            color: white; 
+            border-color: var(--accent); 
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="header">
+            <div class="brand">BIO<span>SYNC</span></div>
+            <div id="status-indicator">Analyzing...</div>
+        </div>
+
+        <div class="gauge-area">
+            <svg viewBox="0 0 36 36" class="circular-chart">
+                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path id="progress-bar" class="circle" stroke-dasharray="12, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <text x="18" y="20.35" class="percentage" id="risk-score">12%</text>
+            </svg>
+            <p style="font-size: 11px; opacity: 0.5;">Multi-Signal Correlation Index</p>
+        </div>
+
+        <div class="vitals-stack">
+            <div class="vital-card">
+                <span class="vital-label">Heart Rate</span>
+                <span class="vital-value"><span id="hr-val">72</span> <small style="font-size: 10px;">BPM</small></span>
+            </div>
+            <div class="vital-card">
+                <span class="vital-label">SpO2 Level</span>
+                <span class="vital-value"><span id="spo2-val">98</span> <small style="font-size: 10px;">%</small></span>
+            </div>
+        </div>
+
+        <div class="nav-footer">
+            <button class="mode-btn active" id="btn-stable" onclick="changeMode('stable')">STABLE</button>
+            <button class="mode-btn" id="btn-drift" onclick="changeMode('drift')">DRIFT</button>
+            <button class="mode-btn" id="btn-critical" onclick="changeMode('critical')">CRITICAL</button>
+        </div>
+    </div>
+
+    <script>
+        // Data configuration
+        const modes = {
+            stable: { hr: 72, spo2: 98, risk: 12, color: '#00f2ff', status: 'System Nominal' },
+            drift: { hr: 94, spo2: 95, risk: 48, color: '#ffab00', status: 'Subtle Pattern Detected' },
+            critical: { hr: 128, spo2: 89, risk: 92, color: '#ff3e3e', status: 'High Correlation Alert' }
+        };
+
+        function changeMode(selected) {
+            const data = modes[selected];
+
+            // 1. Change UI Colors
+            document.documentElement.style.setProperty('--accent', data.color);
+
+            // 2. Update Values
+            document.getElementById('hr-val').innerText = data.hr;
+            document.getElementById('spo2-val').innerText = data.spo2;
+            document.getElementById('status-indicator').innerText = data.status;
+
+            // 3. Update Risk Gauge
+            const progress = document.getElementById('progress-bar');
+            progress.style.strokeDasharray = `${data.risk}, 100`;
+            document.getElementById('risk-score').innerText = `${data.risk}%`;
+
+            // 4. Update Button Styles (Active state)
+            const buttons = document.querySelectorAll('.mode-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            // This line finds the button you clicked and adds the 'active' class
+            const activeBtnId = 'btn-' + selected;
+            document.getElementById(activeBtnId).classList.add('active');
+        }
+    </script>
+</body>
+</html>
