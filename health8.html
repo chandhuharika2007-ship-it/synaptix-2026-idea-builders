@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BioSync AI – Timed Scan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <style>
+    body { background: black; overflow-x: hidden; }
+    .scan-glow { box-shadow: 0 0 30px rgba(34, 211, 238, 0.4); }
+    #sensor:active { background: #083344; }
+    .digital-font { font-family: monospace; }
+    
+    /* Timer Progress Circle */
+    .timer-svg { transform: rotate(-90deg); }
+    .timer-bg { fill: none; stroke: #18181b; stroke-width: 4; }
+    .timer-bar { fill: none; stroke: #22d3ee; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset 0.1s linear; }
+  </style>
+</head>
+<body class="text-white p-4 md:p-8">
+
+  <!-- Header -->
+  <div class="max-w-md mx-auto flex justify-between items-end mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-cyan-400">BioSync AI</h1>
+        <p id="system-status" class="text-[10px] text-zinc-500 uppercase tracking-widest">System Ready</p>
+    </div>
+    <div class="text-right">
+        <div id="live-time" class="text-xl font-bold digital-font text-cyan-500">00:00:00</div>
+    </div>
+  </div>
+
+  <!-- Sensor Area with Timer Circle -->
+  <div class="max-w-md mx-auto mb-6 relative">
+    <div id="sensor" class="relative bg-zinc-900 border-2 border-dashed border-cyan-900 h-44 rounded-3xl flex flex-col items-center justify-center cursor-pointer transition-all duration-300 active:scale-95 group">
+        
+        <!-- SVG Timer Ring -->
+        <svg class="timer-svg absolute w-32 h-32">
+            <circle class="timer-bg" cx="64" cy="64" r="60"></circle>
+            <circle id="timer-bar" class="timer-bar" cx="64" cy="64" r="60"></circle>
+        </svg>
+
+        <div id="scanner-line" class="absolute top-0 left-0 w-full h-1 bg-cyan-400 opacity-0 shadow-[0_0_15px_#22d3ee]"></div>
+        <div id="finger-icon" class="text-cyan-400 text-4xl mb-1 z-10">☝️</div>
+        <div id="countdown" class="text-cyan-400 font-bold text-xl z-10 hidden">10s</div>
+        <p id="sensor-instruction" class="text-zinc-500 text-xs mt-2 group-active:hidden">Hold for 10s Scan</p>
+    </div>
+  </div>
+
+  <!-- Main Display Card -->
+  <div id="card" class="max-w-md mx-auto bg-zinc-900 p-6 rounded-3xl shadow-xl border border-zinc-800 opacity-40 grayscale transition-all duration-700">
+    <div class="mb-4 pb-4 border-b border-zinc-800 flex justify-between items-center">
+        <span class="text-[10px] text-zinc-500 font-bold uppercase">Health Assessment:</span>
+        <span id="condition-tag" class="px-3 py-1 rounded-full text-[10px] font-bold bg-zinc-800">WAITING</span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div class="bg-black/40 p-3 rounded-2xl">
+        <p class="text-[9px] text-zinc-500 uppercase">Heart Rate</p>
+        <div class="text-xl font-bold"><span id="hr">--</span> <span class="text-xs text-zinc-600">BPM</span></div>
+      </div>
+      <div class="bg-black/40 p-3 rounded-2xl">
+        <p class="text-[9px] text-zinc-500 uppercase">SpO2 Level</p>
+        <div class="text-xl font-bold"><span id="spo2">--</span> <span class="text-xs text-zinc-600">%</span></div>
+      </div>
+    </div>
+
+    <div class="mt-8 text-center">
+      <div id="risk" class="text-7xl font-black text-zinc-800 tracking-tighter transition-colors duration-500">--</div>
+      <p id="insight-text" class="text-xs text-zinc-500 mt-2 px-4 italic leading-relaxed">Continuous contact required for biometric sync.</p>
+    </div>
+  </div>
+
+  <div class="max-w-md mx-auto mt-6">
+    <button id="reset-btn" onclick="resetScan()" class="hidden w-full py-3 bg-zinc-800 text-cyan-400 rounded-2xl font-bold text-xs uppercase tracking-widest border border-cyan-900/50">New Scan</button>
+  </div>
+
+  <script>
+    let isScanning = false;
+    let timeLeft = 100; // 10 seconds (100 units for smooth circle)
+    let scanTimer;
+    let dataInterval;
+
+    const SCAN_DURATION = 10; // Seconds
+
+    // UI Refs
+    const sensor = document.getElementById("sensor");
+    const timerBar = document.getElementById("timer-bar");
+    const countdown = document.getElementById("countdown");
+    const fingerIcon = document.getElementById("finger-icon");
+    const systemStatus = document.getElementById("system-status");
+    const resetBtn = document.getElementById("reset-btn");
+
+    function updateClock() {
+        document.getElementById("live-time").textContent = new Date().toLocaleTimeString('en-GB');
+    }
+    setInterval(updateClock, 1000);
+
+    const startScan = () => {
+        if (timeLeft <= 0) return;
+        isScanning = true;
+        systemStatus.textContent = "Analyzing...";
+        document.getElementById("card").classList.remove("opacity-40", "grayscale");
+        document.getElementById("card").classList.add("scan-glow");
+        
+        fingerIcon.classList.add("hidden");
+        countdown.classList.remove("hidden");
+        
+        gsap.to("#scanner-line", { opacity: 1, top: "100%", duration: 1.5, repeat: -1, ease: "linear" });
+
+        // Data Generation Interval
+        dataInterval = setInterval(generateData, 800);
+
+        // Timer Interval
+        scanTimer = setInterval(() => {
+            timeLeft -= 1;
+            const offset = (timeLeft / 100) * 377; // 377 is approx circumference (2 * PI * 60)
+            timerBar.style.strokeDashoffset = 377 - offset;
+            countdown.textContent = Math.ceil(timeLeft / 10) + "s";
+
+            if (timeLeft <= 0) completeScan();
+        }, 100);
+    };
+
+    const stopScan = () => {
+        if (timeLeft <= 0) return;
+        isScanning = false;
+        clearInterval(scanTimer);
+        clearInterval(dataInterval);
+        
+        systemStatus.textContent = "Scan Interrupted";
+        document.getElementById("card").classList.add("opacity-40", "grayscale");
+        fingerIcon.classList.remove("hidden");
+        countdown.classList.add("hidden");
+        gsap.set("#scanner-line", { opacity: 0, top: 0 });
+    };
+
+    const completeScan = () => {
+        isScanning = false;
+        clearInterval(scanTimer);
+        clearInterval(dataInterval);
+        
+        systemStatus.textContent = "Scan Complete";
+        systemStatus.classList.add("text-cyan-400");
+        countdown.textContent = "✓";
+        sensor.style.pointerEvents = "none";
+        resetBtn.classList.remove("hidden");
+        gsap.set("#scanner-line", { opacity: 0 });
+        
+        document.getElementById("insight-text").innerHTML = "<b>Final Report:</b> Biometric data captured at " + new Date().toLocaleTimeString();
+    };
+
+    function resetScan() {
+        location.reload(); // Simplest way to reset all states/charts
+    }
+
+    function generateData() {
+      const hr = 62 + Math.random() * 40;
+      const spo2 = 95 + Math.random() * 4;
+      const riskScore = Math.min(Math.max((hr / 130) * 40 + (100 - spo2) * 15, 5), 95);
+
+      document.getElementById("hr").textContent = Math.round(hr);
+      document.getElementById("spo2").textContent = Math.round(spo2);
+      document.getElementById("risk").textContent = Math.round(riskScore) + "%";
+
+      let color = riskScore < 30 ? "#22d3ee" : (riskScore < 60 ? "#fbbf24" : "#f87171");
+      document.getElementById("risk").style.color = color;
+      document.getElementById("condition-tag").textContent = riskScore < 30 ? "OPTIMAL" : "STRESSED";
+      document.getElementById("condition-tag").style.color = color;
+    }
+
+    sensor.addEventListener("pointerdown", startScan);
+    window.addEventListener("pointerup", stopScan);
+
+    // Init Timer Bar
+    timerBar.style.strokeDasharray = 377;
+    timerBar.style.strokeDashoffset = 377;
+  </script>
+</body>
+</html>
