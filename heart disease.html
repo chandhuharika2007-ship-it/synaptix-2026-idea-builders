@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BioSync AI – Multi-Color Diagnostics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <style>
+    body { background: black; overflow-x: hidden; font-family: sans-serif; transition: background 0.5s ease; }
+    .scan-glow { box-shadow: 0 0 50px var(--glow-color, rgba(34, 211, 238, 0.4)); }
+    #sensor:active { background: #083344; }
+    .digital-font { font-family: monospace; }
+    .timer-svg { transform: rotate(-90deg); }
+    .timer-bg { fill: none; stroke: #18181b; stroke-width: 6; }
+    .timer-bar { fill: none; stroke: currentColor; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 377; stroke-dashoffset: 377; transition: stroke 0.3s ease; }
+    .bg-accent { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100vw; height: 100vh; background: radial-gradient(circle, var(--glow-color, transparent) 0%, transparent 70%); z-index: -1; opacity: 0.15; pointer-events: none; transition: all 0.8s ease; }
+    #ekg-path { transition: stroke 0.3s ease; }
+  </style>
+</head>
+<body class="text-white p-4 md:p-8">
+
+  <div class="bg-accent" id="bg-glow"></div>
+  <audio id="myAudio" loop><source src="audio.mp3" type="audio/mpeg"></audio>
+
+  <div class="max-w-md mx-auto flex justify-between items-end mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-cyan-400" id="main-title">BioSync AI</h1>
+        <p id="system-status" class="text-[10px] text-zinc-500 uppercase tracking-widest transition-colors">Chromic Engine Active</p>
+    </div>
+    <div class="text-right">
+        <div id="live-time" class="text-xl font-bold digital-font text-cyan-500">00:00:00</div>
+    </div>
+  </div>
+
+  <div class="max-w-md mx-auto mb-6 relative">
+    <div id="sensor" class="relative bg-zinc-900 border-2 border-dashed border-zinc-800 h-44 rounded-3xl flex flex-col items-center justify-center cursor-pointer transition-all duration-300 active:scale-95 group">
+        <svg class="timer-svg absolute w-36 h-36">
+            <circle class="timer-bg" cx="72" cy="72" r="60"></circle>
+            <circle id="timer-bar" class="timer-bar text-cyan-400" cx="72" cy="72" r="60"></circle>
+        </svg>
+        <div id="scanner-line" class="absolute top-0 left-0 w-full h-1 bg-cyan-400 opacity-0 shadow-[0_0_15px_currentColor]"></div>
+        <div id="finger-icon" class="text-cyan-400 text-5xl mb-1 z-10">☝️</div>
+        <div id="countdown" class="text-cyan-400 font-bold text-2xl z-10 hidden">10s</div>
+        <p class="text-zinc-500 text-[10px] mt-2 group-active:hidden uppercase tracking-tighter">Initiate Spectral Scan</p>
+    </div>
+  </div>
+
+  <div id="card" class="max-w-md mx-auto bg-zinc-900 p-6 rounded-3xl border border-zinc-800 opacity-30 grayscale transition-all duration-500">
+    <div class="mb-4 pb-4 border-b border-zinc-800 flex justify-between items-center">
+        <span class="text-[10px] text-zinc-500 font-bold uppercase">Health Spectrum:</span>
+        <span id="condition-tag" class="px-3 py-1 rounded-full text-[10px] font-bold bg-black/50 tracking-wider">CALIBRATING</span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="bg-black/60 p-3 rounded-xl border border-white/5 text-center transition-all">
+        <p class="text-[8px] text-zinc-500 uppercase mb-1">Heart Rate (BPM)</p>
+        <div class="text-lg font-bold" id="hr-val">--</div>
+      </div>
+      <div class="bg-black/60 p-3 rounded-xl border border-white/5 text-center transition-all">
+        <p class="text-[8px] text-zinc-500 uppercase mb-1">Blood Pressure (mmHg)</p>
+        <div class="text-lg font-bold" id="bp-val">--/--</div>
+      </div>
+      <div class="bg-black/60 p-3 rounded-xl border border-white/5 text-center transition-all">
+        <p class="text-[8px] text-zinc-500 uppercase mb-1">SpO2 %</p>
+        <div class="text-lg font-bold" id="spo2-val">--</div>
+      </div>
+      <div class="bg-black/60 p-3 rounded-xl border border-white/5 text-center transition-all">
+        <p class="text-[8px] text-zinc-500 uppercase mb-1">Temp °F</p>
+        <div class="text-lg font-bold" id="temp-val">--</div>
+      </div>
+    </div>
+
+    <div class="w-full h-16 mt-4 relative overflow-hidden bg-black/40 rounded-xl border border-white/5 flex items-center">
+        <svg id="ekg-svg" class="absolute w-[200%] h-full flex items-center opacity-30 transition-opacity duration-300" viewBox="0 0 200 40" preserveAspectRatio="none">
+            <path id="ekg-path" fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"
+                d="M 0,20 L 20,20 L 25,15 L 30,20 L 40,20 L 45,25 L 50,5 L 55,35 L 60,20 L 70,20 L 75,15 L 80,20 L 100,20 
+                   L 120,20 L 125,15 L 130,20 L 140,20 L 145,25 L 150,5 L 155,35 L 160,20 L 170,20 L 175,15 L 180,20 L 200,20" />
+        </svg>
+        <div class="absolute inset-0 bg-gradient-to-r from-zinc-900 via-transparent to-zinc-900 pointer-events-none"></div>
+    </div>
+
+    <div class="mt-4 text-center">
+      <div id="risk" class="text-7xl font-black text-zinc-800 tracking-tighter transition-all duration-500">--</div>
+      <p id="insight-text" class="text-[11px] text-zinc-400 mt-3 italic px-2 leading-relaxed">System awaiting touch input...</p>
+    </div>
+  </div>
+
+  <div class="max-w-md mx-auto mt-6">
+    <button id="reset-btn" onclick="location.reload()" class="hidden w-full py-4 bg-zinc-900 text-white rounded-2xl font-bold text-xs uppercase tracking-[0.2em] border border-white/10 hover:bg-zinc-800 transition-all">Flush Buffer & Reset</button>
+  </div>
+
+  <script>
+    let isScanning = false;
+    let progress = 100;
+    let scanTimer, dataInterval;
+    const CIRCUMFERENCE = 377; 
+    const scanAudio = document.getElementById("myAudio");
+
+    let ekgAnim = gsap.to("#ekg-svg", {
+        xPercent: -50,
+        ease: "none",
+        duration: 1, 
+        repeat: -1,
+        paused: true
+    });
+
+    const startScan = (e) => {
+        if (progress <= 0) return;
+        e.preventDefault();
+        isScanning = true;
+        scanAudio.play().catch(() => {});
+        document.getElementById("system-status").textContent = "Decoding Biometric Spectrum...";
+        document.getElementById("card").classList.remove("opacity-30", "grayscale");
+        document.getElementById("card").classList.add("scan-glow");
+        document.getElementById("finger-icon").classList.add("hidden");
+        document.getElementById("countdown").classList.remove("hidden");
+        document.getElementById("ekg-svg").classList.remove("opacity-30");
+        document.getElementById("ekg-svg").classList.add("opacity-100");
+        gsap.to("#scanner-line", { opacity: 1, top: "100%", duration: 1.2, repeat: -1, ease: "power1.inOut" });
+        ekgAnim.play();
+        dataInterval = setInterval(updateStats, 600);
+        scanTimer = setInterval(() => {
+            progress -= 1;
+            document.getElementById("timer-bar").style.strokeDashoffset = CIRCUMFERENCE - (progress / 100) * CIRCUMFERENCE;
+            document.getElementById("countdown").textContent = Math.ceil(progress / 10) + "s";
+            if (progress <= 0) finalize();
+        }, 100);
+    };
+
+    const stopScan = () => {
+        if (progress <= 0) return;
+        isScanning = false;
+        scanAudio.pause();
+        clearInterval(scanTimer);
+        clearInterval(dataInterval);
+        document.getElementById("system-status").textContent = "Spectrum Sync Lost";
+        document.getElementById("card").classList.add("opacity-30", "grayscale");
+        document.getElementById("finger-icon").classList.remove("hidden");
+        document.getElementById("countdown").classList.add("hidden");
+        document.getElementById("ekg-svg").classList.remove("opacity-100");
+        document.getElementById("ekg-svg").classList.add("opacity-30");
+        gsap.set("#scanner-line", { opacity: 0, top: 0 });
+        ekgAnim.pause();
+    };
+
+    function updateStats() {
+      const hr = 60 + Math.random() * 55;
+      const spo2 = 92 + Math.random() * 8;
+      const temp = 97.2 + Math.random() * 3.5;
+      
+      // Calculate BP based on stress level (Heart Rate)
+      // Normal: 120/80. High Stress: 150/95.
+      const sys = Math.round(110 + (hr - 60) * 0.6 + Math.random() * 5);
+      const dia = Math.round(70 + (hr - 60) * 0.4 + Math.random() * 5);
+      
+      document.getElementById("hr-val").textContent = Math.round(hr);
+      document.getElementById("bp-val").textContent = `${sys}/${dia}`;
+      document.getElementById("spo2-val").textContent = Math.round(spo2);
+      document.getElementById("temp-val").textContent = temp.toFixed(1);
+
+      ekgAnim.timeScale(hr / 60);
+
+      // AI Risk Logic including BP hypertension (over 140 systolic)
+      let riskVal = Math.round((hr/140)*30 + (100-spo2)*25 + (temp-98.6)*15 + (sys-120)*0.5);
+      riskVal = Math.min(Math.max(riskVal, 5), 99);
+      
+      let themeColor, prediction;
+
+      if (riskVal > 65 || temp > 101 || sys > 150) {
+          themeColor = "#f87171"; // Red
+          prediction = "CRITICAL ADAPTATION";
+      } else if (riskVal > 35 || spo2 < 95 || sys > 135) {
+          themeColor = "#fbbf24"; // Yellow
+          prediction = "MODERATE STRESS";
+      } else {
+          themeColor = "#22d3ee"; // Cyan
+          prediction = "PEAK PERFORMANCE";
+      }
+
+      const elements = [
+          document.getElementById("risk"),
+          document.getElementById("condition-tag"),
+          document.getElementById("timer-bar"),
+          document.getElementById("scanner-line"),
+          document.getElementById("countdown"),
+          document.getElementById("hr-val"),
+          document.getElementById("bp-val"),
+          document.getElementById("spo2-val"),
+          document.getElementById("temp-val")
+      ];
+      
+      elements.forEach(el => el.style.color = themeColor);
+      document.getElementById("ekg-path").style.stroke = themeColor;
+      document.body.style.setProperty('--glow-color', themeColor + "66");
+      document.getElementById("bg-glow").style.setProperty('--glow-color', themeColor);
+      document.getElementById("card").style.borderColor = themeColor + "33";
+      
+      document.getElementById("risk").textContent = riskVal + "%";
+      document.getElementById("condition-tag").textContent = prediction;
+      document.getElementById("insight-text").textContent = `Spectral insight suggests ${prediction.toLowerCase()}. Engine recalibrating...`;
+    }
+
+    const finalize = () => {
+        isScanning = false;
+        scanAudio.pause();
+        clearInterval(scanTimer);
+        clearInterval(dataInterval);
+        document.getElementById("system-status").textContent = "Diagnostic Array Locked";
+        document.getElementById("countdown").textContent = "✓";
+        document.getElementById("sensor").style.pointerEvents = "none";
+        document.getElementById("reset-btn").classList.remove("hidden");
+        ekgAnim.timeScale(1); 
+    };
+
+    document.getElementById("sensor").addEventListener("pointerdown", startScan);
+    window.addEventListener("pointerup", stopScan);
+    setInterval(() => { document.getElementById("live-time").textContent = new Date().toLocaleTimeString('en-GB'); }, 1000);
+  </script>
+</body>
+</html>
