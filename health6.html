@@ -1,0 +1,147 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BioSync AI – Touch Pulse</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <style>
+    body { background: black; overflow-x: hidden; }
+    .scan-glow { box-shadow: 0 0 20px rgba(34, 211, 238, 0.3); }
+    #sensor:active { background: #164e63; }
+  </style>
+</head>
+<body class="text-white p-4 md:p-8">
+
+  <h1 class="text-3xl font-bold text-cyan-400 mb-6 text-center">BioSync AI Finger-Scan</h1>
+
+  <!-- Sensor Area -->
+  <div class="max-w-md mx-auto mb-8">
+    <div id="sensor" class="relative bg-zinc-900 border-2 border-dashed border-cyan-800 h-48 rounded-3xl flex flex-col items-center justify-center cursor-pointer transition-all duration-300 active:scale-95 group">
+        <div id="scanner-line" class="absolute top-0 left-0 w-full h-1 bg-cyan-400 opacity-0 shadow-[0_0_15px_#22d3ee]"></div>
+        <div class="text-cyan-400 text-5xl mb-2 group-active:animate-pulse">☝️</div>
+        <p class="text-zinc-500 group-active:hidden">Place & Hold Finger to Scan</p>
+        <p class="text-cyan-400 hidden group-active:block font-mono animate-pulse">SCANNING PULSE...</p>
+    </div>
+  </div>
+
+  <!-- Health Card -->
+  <div id="card" class="max-w-md mx-auto bg-zinc-900 p-6 rounded-3xl shadow-xl border border-zinc-800 opacity-50 grayscale transition-all duration-500">
+    <div class="grid grid-cols-2 gap-4 text-sm md:text-lg">
+      <div class="bg-black/40 p-3 rounded-xl">❤️ HR: <span id="hr" class="text-cyan-400">--</span></div>
+      <div class="bg-black/40 p-3 rounded-xl">🫁 SpO₂: <span id="spo2" class="text-cyan-400">--</span></div>
+      <div class="bg-black/40 p-3 rounded-xl">🌡 Temp: <span id="temp" class="text-cyan-400">--</span></div>
+      <div class="bg-black/40 p-3 rounded-xl">💓 HRV: <span id="hrv" class="text-cyan-400">--</span></div>
+    </div>
+
+    <div class="mt-6 text-center">
+      <div class="text-xs uppercase tracking-widest opacity-50 mb-1">Live Risk Factor</div>
+      <div id="risk" class="text-6xl font-black text-zinc-700">--</div>
+    </div>
+  </div>
+
+  <div class="max-w-md mx-auto mt-8 bg-zinc-900 p-4 rounded-3xl border border-zinc-800">
+    <canvas id="riskChart" height="150"></canvas>
+  </div>
+
+  <script>
+    let isScanning = false;
+    let scanInterval;
+
+    const sensor = document.getElementById("sensor");
+    const scannerLine = document.getElementById("scanner-line");
+    const card = document.getElementById("card");
+    const riskEl = document.getElementById("risk");
+
+    // Chart Init
+    const ctx = document.getElementById("riskChart").getContext("2d");
+    const riskChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [{
+          label: "Risk %",
+          data: [],
+          borderColor: "#22d3ee",
+          backgroundColor: "rgba(34, 211, 238, 0.1)",
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { 
+            x: { display: false },
+            y: { min: 0, max: 100, ticks: { color: '#444' }, grid: { color: '#222' } } 
+        }
+      }
+    });
+
+    // Start Scanning (Pointer Down)
+    const startScan = () => {
+        isScanning = true;
+        card.classList.remove("opacity-50", "grayscale");
+        card.classList.add("scan-glow", "border-cyan-500/50");
+        
+        // Reset scanner animation
+        gsap.to(scannerLine, { opacity: 1, top: "100%", duration: 1.5, repeat: -1, ease: "linear" });
+        
+        scanInterval = setInterval(generateData, 800);
+    };
+
+    // Stop Scanning (Pointer Up / Leave)
+    const stopScan = () => {
+        isScanning = false;
+        card.classList.add("opacity-50", "grayscale");
+        card.classList.remove("scan-glow", "border-cyan-500/50");
+        
+        gsap.set(scannerLine, { opacity: 0, top: 0 });
+        gsap.killTweensOf(scannerLine);
+        
+        clearInterval(scanInterval);
+    };
+
+    // Listeners for Trackpad/Touch/Mouse
+    sensor.addEventListener("pointerdown", startScan);
+    window.addEventListener("pointerup", stopScan);
+
+    function generateData() {
+      if(!isScanning) return;
+
+      const hr = 65 + Math.random() * 30;
+      const spo2 = 96 + Math.random() * 3;
+      const temp = 98.2 + Math.random() * 1;
+      const hrv = 45 + Math.random() * 30;
+
+      const riskScore = (hr / 130) * 30 + (100 - spo2) * 10 + Math.abs(temp - 98.6) * 10;
+      const finalRisk = Math.min(Math.max(riskScore, 5), 95);
+
+      // Update UI
+      document.getElementById("hr").textContent = Math.round(hr);
+      document.getElementById("spo2").textContent = Math.round(spo2);
+      document.getElementById("temp").textContent = temp.toFixed(1);
+      document.getElementById("hrv").textContent = Math.round(hrv);
+      riskEl.textContent = Math.round(finalRisk) + "%";
+
+      // Color Logic
+      if (finalRisk > 60) riskEl.className = "text-6xl font-black text-red-500";
+      else if (finalRisk > 30) riskEl.className = "text-6xl font-black text-yellow-400";
+      else riskEl.className = "text-6xl font-black text-cyan-400";
+
+      // Update Chart
+      riskChart.data.labels.push("");
+      riskChart.data.datasets[0].data.push(finalRisk);
+      if (riskChart.data.labels.length > 15) {
+        riskChart.data.labels.shift();
+        riskChart.data.datasets[0].data.shift();
+      }
+      riskChart.update('none');
+    }
+  </script>
+</body>
+</html>
