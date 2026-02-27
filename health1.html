@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BioSync | Real-Time Correlation Monitor</title>
+    <link rel="stylesheet" href="health1.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="brand">BIOSYNC <span>V2.0</span></div>
+            <div id="risk-badge" class="badge-low">STABLE PATTERN</div>
+        </header>
+
+        <section class="main-display">
+            <div class="score-circle">
+                <svg viewBox="0 0 36 36" class="circular-chart">
+                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <path id="score-progress" class="circle" stroke-dasharray="15, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    <text x="18" y="20.35" class="percentage" id="risk-score">15%</text>
+                </svg>
+                <p>Multi-Signal Risk Index</p>
+            </div>
+
+            <div class="vitals-container">
+                <div class="vital-box" id="box-hr">
+                    <label>Heart Rate</label>
+                    <div class="value"><span id="val-hr">72</span> <small>BPM</small></div>
+                </div>
+                <div class="vital-box" id="box-spo2">
+                    <label>SpO2</label>
+                    <div class="value"><span id="val-spo2">98</span> <small>%</small></div>
+                </div>
+                <div class="vital-box" id="box-resp">
+                    <label>Respiration</label>
+                    <div class="value"><span id="val-resp">16</span> <small>BRM</small></div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="demo-controls">
+            <span>Demo Mode:</span>
+            <button onclick="setMode('stable')">Stable</button>
+            <button onclick="setMode('subtle')">Subtle Drift</button>
+            <button onclick="setMode('critical')">High Correlation Risk</button>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

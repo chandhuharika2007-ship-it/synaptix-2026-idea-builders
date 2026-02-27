@@ -1,0 +1,60 @@
+
+:root {
+    --bg: #050505;
+    --accent: #00f2ff;
+    --danger: #ff4757;
+    --safe: #2ed573;
+    --glass: rgba(255, 255, 255, 0.05);
+}
+
+body {
+    background: var(--bg);
+    color: white;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.app-container {
+    width: 900px;
+    background: #111;
+    border-radius: 24px;
+    padding: 30px;
+    border: 1px solid #333;
+}
+
+.header { display: flex; justify-content: space-between; margin-bottom: 40px; }
+.brand { font-weight: bold; letter-spacing: 2px; }
+.brand span { color: var(--accent); }
+
+/* Progress Circle */
+.circular-chart { max-width: 250px; margin: 0 auto; display: block; }
+.circle-bg { fill: none; stroke: #333; stroke-width: 2.8; }
+.circle { fill: none; stroke: var(--accent); stroke-width: 2.8; stroke-linecap: round; transition: stroke-dasharray 0.5s ease; }
+.percentage { fill: #fff; font-size: 0.5em; text-anchor: middle; font-weight: bold; }
+
+.main-display { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
+
+.vital-box {
+    background: var(--glass);
+    padding: 20px;
+    border-radius: 16px;
+    margin-bottom: 15px;
+    border-left: 4px solid var(--accent);
+}
+
+.vital-box label { font-size: 12px; text-transform: uppercase; opacity: 0.6; }
+.vital-box .value { font-size: 28px; font-weight: bold; }
+
+/* Demo Controls */
+.demo-controls { margin-top: 30px; padding-top: 20px; border-top: 1px solid #333; }
+button { background: #333; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin-right: 10px; }
+button:hover { background: var(--accent); color: black; }
+
+.badge-low { color: var(--safe); border: 1px solid var(--safe); padding: 5px 10px; border-radius: 50px; font-size: 12px; }
+.badge-high { color: var(--danger); border: 1px solid var(--danger); padding: 5px 10px; border-radius: 50px; font-size: 12px; animation: blink 1s infinite; }
+
+@keyframes blink { 50% { opacity: 0; } }
